@@ -1,36 +1,16 @@
-// scripts/checkMinted.js
 const { ethers } = require("hardhat");
-require("dotenv").config();
 
 async function main() {
-  const deployed = require("../deployed.json");
-  const contract = await ethers.getContractAt(
-    "CrossChainNFTTicketing",
-    deployed.sepolia
-  );
+  const Ticket = await ethers.getContractFactory("CrossChainNFTTicketing");
+  const ticketSepolia = Ticket.attach(process.env.SEPOLIA_CONTRACT);
 
-  const [buyer] = await ethers.getSigners(); // Use the first signer
+  const user = process.env.USER_ADDRESS;
+  const tickets = await ticketSepolia.userTickets(user);
+  console.log("User has the following ticket IDs:", tickets.map(t => t.toString()));
 
-  const totalTickets = await contract.getTotalTickets();
-  console.log("🎟️ Total tickets minted on Sepolia:", totalTickets.toString());
-
-  const balance = await contract.balanceOf(buyer.address);
-  console.log(`👤 Buyer (${buyer.address}) NFT balance:`, balance.toString());
-
-  if (balance.gt(0)) {
-    const tokens = [];
-    for (let i = 0; i < balance; i++) {
-      const tokenId = await contract.tokenOfOwnerByIndex(buyer.address, i);
-      tokens.push(tokenId.toString());
-    }
-    console.log("📄 Token IDs owned by buyer:", tokens);
+  for (const id of tickets) {
+    const owner = await ticketSepolia.ownerOf(id);
+    console.log(`NFT #${id} is owned by:`, owner);
   }
-
-  const hasTicket = await contract.hasTicketForEvent(1, buyer.address);
-  console.log("✅ Buyer has ticket for event 1:", hasTicket);
 }
-
-main().catch(err => {
-  console.error("❌ Script failed:", err);
-  process.exit(1);
-});
+main().catch(console.error);
